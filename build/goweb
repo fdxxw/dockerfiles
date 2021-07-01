@@ -1,0 +1,41 @@
+FROM node:14.17.1-buster
+MAINTAINER fdxxw <ucmxxw@163.com>
+
+RUN ln -sf /usr/share/zoneinfo/Asia/Shanghai /etc/localtime; \
+    echo "Asia/Shanghai" > /etc/timezone; \
+    yarn config set registry https://registry.npm.taobao.org;
+
+RUN wget -O docker.tgz "https://download.docker.com/linux/static/stable/x86_64/docker-19.03.15.tgz" && \
+    tar --extract \
+		--file docker.tgz \
+		--strip-components 1 \
+		--directory /usr/local/bin/ && \
+    rm docker.tgz;
+
+ENV GOPATH /go
+ENV PATH $GOPATH/bin:$PATH
+ENV GOPROXY https://goproxy.cn,direct
+ENV GO111MODULE on
+ENV PATH /usr/local/go/bin:$PATH
+RUN mkdir -p "$GOPATH/src" "$GOPATH/bin" && chmod -R 777 "$GOPATH"
+
+RUN wget -O go.tgz "https://dl.google.com/go/go1.16.5.linux-amd64.tar.gz"; \
+    tar -C /usr/local/ -xzf go.tgz; \
+    rm go.tgz; \
+    go version;
+
+
+
+RUN go get -u github.com/fdxxw/gmake && go get github.com/rakyll/statik
+
+
+
+COPY docker_push.sh /usr/bin/docker_push
+COPY id_rsa /root/.ssh/id_rsa
+COPY id_rsa.pub /root/.ssh/id_rsa.pub
+RUN chmod 700  /root/.ssh/id_rsa && \
+    chmod 700 /root/.ssh/id_rsa.pub
+RUN  chmod +x /usr/bin/docker_push
+
+RUN mkdir -p /etc/docker && echo -e '{"insecure-registries": ["192.168.13.91:5000","hub-mirror.c.163.com"],"registry-mirrors":["https://hub-mirror.c.163.com/", "http://192.168.13.91:5000"]}' > /etc/docker/daemon.json
+
